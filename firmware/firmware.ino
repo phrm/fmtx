@@ -144,7 +144,9 @@
 #define BAND_TOP		10800	// 108.0 MHz
 
 // wdt
-#define WDTO			WDTO_1S
+#define WDTO			WDTO_500MS
+#define wdt_sei()		bitSet(WDTCR, WDIE)
+#define wdt_cli()		bitClear(WDTCR, WDIE)
 
 // list
 #define LIST_SIZE		119
@@ -328,18 +330,6 @@ void wait_open_btn ()
 	}
 }
 
-void wdt_sei(void)
-{
-	asm("wdr");
-	WDTCR |= (1 << WDIE) | (1 << WDE) | WDTO;
-}
-
-void wdt_cli(void)
-{
-	asm("wdr");
-	WDTCR |= (1 << WDE) | WDTO;
-}
-
 /* --------------------------------------------------------- */
 
 ISR(PCINT0_vect) {}
@@ -355,7 +345,7 @@ void setup ()
 	pinMode(PIN_BTN, INPUT_PULLUP);
 
 	//	wdt
-	wdt_cli();
+	wdt_enable(WDTO);
 
 	//	PCINT3 change
 	PCMSK |= (1 << PCINT3);
@@ -381,7 +371,6 @@ void setup ()
 	TinyWireM.begin();
 
 	//	si741x/2x power up and configure
-	wdt_reset();
 	power_up();
 	gpio_ctl();
 	configure();
@@ -445,8 +434,8 @@ void loop ()
 	}
 	while (1);
 
-	wait_cts();		// si47xx is responding else system reset 
-	wdt_sei();		// set wdt interrupt -> wake up on wdt
+	wait_cts();	// si47xx is responding else system reset 
+	wdt_sei();	// set wdt interrupt -> wake up on wdt
 
 	//	sleep
 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
@@ -454,7 +443,7 @@ void loop ()
 	sleep_mode();
 	sleep_disable();
 
-	wdt_cli();		// clear wdt interrupt -> system reset on timeout
+	wdt_cli();	// clear wdt interrupt -> system reset on timeout
 }
 
 /* --------------------------------------------------------- */
